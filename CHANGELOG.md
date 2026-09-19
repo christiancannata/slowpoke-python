@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 - 2026-09-19
+
+- The version the package reports to the agent is the version of the release: 0.1.1 still said
+  0.1.0, and on PyPI the release would have carried the wrong number altogether, because the
+  version is read from that same constant.
+- `license` in pyproject.toml is a plain string, as PEP 639 asks: setuptools warned on every build.
+
 ## 0.1.1 - 2026-09-19
 
 Nothing changes in the package itself: the first public run of the test matrix could not install
