@@ -4,12 +4,12 @@
 
 <p align="center">
 <a href="https://github.com/christiancannata/slowpoke-python/actions/workflows/tests.yml"><img alt="tests" src="https://github.com/christiancannata/slowpoke-python/actions/workflows/tests.yml/badge.svg"></a>
-<a href="https://pypi.org/project/slowpoke/"><img alt="PyPI" src="https://img.shields.io/pypi/v/slowpoke"></a>
-<a href="https://pypi.org/project/slowpoke/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/slowpoke"></a>
+<a href="https://pypi.org/project/slowpoke-python/"><img alt="PyPI" src="https://img.shields.io/pypi/v/slowpoke-python"></a>
+<a href="https://pypi.org/project/slowpoke-python/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/slowpoke-python"></a>
 <a href="https://github.com/christiancannata/slowpoke-python/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/christiancannata/slowpoke-python/actions/workflows/codeql.yml/badge.svg"></a>
 <a href="#performance"><img alt="runtime dependencies: 0" src="https://img.shields.io/badge/runtime%20dependencies-0-brightgreen"></a>
 <a href="https://scorecard.dev/viewer/?uri=github.com/christiancannata/slowpoke-python"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/christiancannata/slowpoke-python/badge"></a>
-<a href="LICENSE"><img alt="MIT" src="https://img.shields.io/pypi/l/slowpoke"></a>
+<a href="LICENSE"><img alt="MIT" src="https://img.shields.io/pypi/l/slowpoke-python"></a>
 </p>
 
 ---
@@ -41,8 +41,11 @@ slower.
 ## Install
 
 ```sh
-pip install slowpoke
+pip install slowpoke-python
 ```
+
+The name on PyPI carries the language, like the other packages of this project; what you import is
+`slowpoke`. (Plain `slowpoke` on PyPI is a different thing, published once in 2012 and never again.)
 
 No SDK, no extension, no key to carry, no account anywhere. The package talks to the Slowpoke agent on the
 same machine, which needs one line in `/etc/slowpoke/agent.yaml`:

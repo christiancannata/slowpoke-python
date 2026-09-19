@@ -1,7 +1,12 @@
 """This package runs inside other people's applications. Weight is a promise, so it is a test."""
 
 import os
-import tomllib
+
+import pytest
+
+# tomllib arrived in 3.11 and this package supports 3.9: the file it reads is the same on every
+# version, so checking it where the standard library can read it is enough.
+tomllib = pytest.importorskip("tomllib")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)

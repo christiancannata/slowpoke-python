@@ -6,7 +6,7 @@ import re
 import sys
 import time
 
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 
 SERVER = 2
 CLIENT = 3

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3 - 2026-09-19
+
+- The name on PyPI is **slowpoke-python**: plain `slowpoke` was taken in 2012 by a package with one
+  release and no sign of life since, and waiting on a name transfer would have kept this one off
+  PyPI for weeks. What you import is unchanged: `import slowpoke`, `slowpoke.django`,
+  `slowpoke.celery`.
+- Weight is a test now: no runtime dependency, extras that only name frameworks the application
+  already has, and a wall on the size of `src/`.
+
 ## 0.1.2 - 2026-09-19
 
 - The version the package reports to the agent is the version of the release: 0.1.1 still said

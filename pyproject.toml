@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "slowpoke"
+name = "slowpoke-python"
 dynamic = ["version"]
 description = "Tells Slowpoke which line of your Python app ran each query: Django, SQLAlchemy, FastAPI, Flask"
 readme = "README.md"
