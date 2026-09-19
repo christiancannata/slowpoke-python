@@ -22,7 +22,7 @@ classifiers = [
 
 [project.optional-dependencies]
 django = ["Django>=4.2"]
-sqlalchemy = ["SQLAlchemy>=1.4"]
+sqlalchemy = ["SQLAlchemy>=2.0.54"]
 flask = ["Flask>=2.0"]
 fastapi = ["starlette"]
 

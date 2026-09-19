@@ -1,6 +1,6 @@
 pytest
 Django>=4.2
-SQLAlchemy>=1.4
+SQLAlchemy>=2.0.54
 greenlet
 aiosqlite
 Flask>=2.0
