@@ -1,0 +1,48 @@
+name: publish
+
+# On a version tag: build the distributions and upload them to PyPI as this repository, through
+# OpenID Connect. There is no token anywhere - not in a secret, not on a laptop - and PyPI records
+# which workflow of which repository published each file.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.12"
+      - name: The suite, before anything leaves
+        run: |
+          python -m pip install -q -r requirements-test.txt
+          PYTHONPATH=src python -m pytest -q
+      - name: Build
+        run: |
+          python -m pip install -q build twine
+          python -m build
+          twine check dist/*
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # this, and nothing else, is what lets it publish
+    steps:
+      - uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317 # v6.0.0
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1

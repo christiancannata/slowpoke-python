@@ -6,6 +6,8 @@
 <a href="https://github.com/christiancannata/slowpoke-python/actions/workflows/tests.yml"><img alt="tests" src="https://github.com/christiancannata/slowpoke-python/actions/workflows/tests.yml/badge.svg"></a>
 <a href="https://pypi.org/project/slowpoke/"><img alt="PyPI" src="https://img.shields.io/pypi/v/slowpoke"></a>
 <a href="https://pypi.org/project/slowpoke/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/slowpoke"></a>
+<a href="https://github.com/christiancannata/slowpoke-python/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/christiancannata/slowpoke-python/actions/workflows/codeql.yml/badge.svg"></a>
+<a href="#performance"><img alt="runtime dependencies: 0" src="https://img.shields.io/badge/runtime%20dependencies-0-brightgreen"></a>
 <a href="https://scorecard.dev/viewer/?uri=github.com/christiancannata/slowpoke-python"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/christiancannata/slowpoke-python/badge"></a>
 <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/pypi/l/slowpoke"></a>
 </p>
@@ -132,7 +134,8 @@ that to be measured. Everything else happens off the request:
 | **Quiet when idle** | queries outside a request, a task or a command — a worker polling its broker, a shell you opened — cost one context variable lookup and are not recorded |
 | **Async-safe** | the trace lives in `contextvars`: it follows `sync_to_async`, `run_in_threadpool` and asyncio tasks, and a statement run in a worker thread is attributed to the line that awaited it |
 
-About 1000 lines of Python. **No runtime dependency at all**: only the standard library.
+About 1000 lines of Python. **No runtime dependency at all**: only the standard library. A test in the suite fails the day that stops being true,
+and another one fails if anything but source and documentation ends up in a published copy.
 
 ## What is sent, and what never is
 
