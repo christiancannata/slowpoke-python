@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 - 2026-09-19
+
+Nothing changes in the package itself: the first public run of the test matrix could not install
+the oldest supported set at all. The constraints were written straight into the workflow's shell,
+where `Werkzeug<3` is a redirection and not a version: they travel through the environment now.
+
 ## 0.1.0 - 2026-09-18
 
 First release.

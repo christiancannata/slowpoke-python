@@ -28,9 +28,13 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Install
+        # Through the environment, not straight into the script: a constraint like "Werkzeug<3"
+        # read by the shell at parse time is a redirection, and the job dies on "3: No such file".
+        env:
+          CONSTRAINTS: ${{ matrix.constraints }}
         run: |
           python -m pip install -q --upgrade pip
-          printf '%s\n' ${{ matrix.constraints }} > constraints.txt
+          printf '%s\n' $CONSTRAINTS > constraints.txt
           python -m pip install -q -r requirements-test.txt -c constraints.txt
       - run: PYTHONPATH=src python -m pytest -p no:cacheprovider
   ruff:
