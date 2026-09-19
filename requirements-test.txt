@@ -1,0 +1,9 @@
+pytest
+Django>=4.2
+SQLAlchemy>=1.4
+greenlet
+aiosqlite
+Flask>=2.0
+fastapi
+httpx
+celery

@@ -1,0 +1,36 @@
+#!/bin/sh
+# Runs the pytest suite in Docker, nothing installed on the host.
+#   ./bin/test 3.13                                   latest Django, SQLAlchemy, Flask, FastAPI that 3.13 accepts
+#   ./bin/test 3.9 'Django~=4.2.0' 'SQLAlchemy~=1.4.0' 'Flask~=2.3.0'   older releases, as pip constraints
+#   ./bin/test 3.13 -k origin tests/test_django.py    arguments starting with "-" or containing "/" go to pytest
+# One virtualenv per Python/constraints combination, kept in a Docker volume: runs do not reinstall
+# each other's dependencies, and frameworks live in site-packages as they do in production (the origin
+# finder must see them as third-party code).
+set -eu
+cd "$(dirname "$0")/.."
+py="${1:-3.13}"; shift || true
+constraints=""
+while [ $# -gt 0 ] && [ "${1#-}" = "$1" ] && [ "${1#*/}" = "$1" ]; do constraints="$constraints$1
+"; shift; done
+tag="slowpoke-python-test:$py"
+docker image inspect "$tag" >/dev/null 2>&1 || docker build -q --build-arg PY="$py" -t "$tag" docker >/dev/null
+key="py$py-$(printf '%s' "$constraints" | tr -c 'A-Za-z0-9.\n' '-' | tr '\n' '_')"
+venv="/venvs/$key"
+# Inside the Slowpoke repository the shared fixtures in spec/ are mounted too; the standalone
+# package repository runs the same tests without them (the fixture test is then skipped).
+spec=""
+[ -d ../../spec ] && spec="-v $(cd ../../spec && pwd):/repo/spec"
+exec docker run --rm --cpus 1 \
+  -v "$(pwd)":/repo/packages/python $spec -v slowpoke-python-venvs:/venvs -v slowpoke-pip-cache:/root/.cache/pip \
+  -e CONSTRAINTS="$constraints" -e VENV="$venv" -e UPDATE_FIXTURES="${UPDATE_FIXTURES:-}" \
+  "$tag" sh -c '
+    set -e
+    if [ ! -f "$VENV/.ok" ] || ! cmp -s requirements-test.txt "$VENV/.requirements"; then
+      rm -rf "$VENV" && python -m venv "$VENV"
+      printf "%s" "$CONSTRAINTS" > "$VENV/constraints.txt"
+      "$VENV/bin/pip" install -q -r requirements-test.txt -c "$VENV/constraints.txt"
+      cp requirements-test.txt "$VENV/.requirements" && touch "$VENV/.ok"
+    fi
+    "$VENV/bin/pip" list 2>/dev/null | grep -iE "^(django|sqlalchemy|flask|fastapi|starlette) " | tr -s " " | tr "\n" " "; echo
+    PYTHONPATH=src exec "$VENV/bin/python" -m pytest -p no:cacheprovider "$@"
+  ' sh "$@"

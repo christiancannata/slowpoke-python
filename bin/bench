@@ -1,0 +1,40 @@
+#!/bin/sh
+# What the package costs a request, measured instead of claimed.
+#   ./bin/bench          Python 3.9 and 3.13
+#   ./bin/bench 3.12     one version
+#
+# It times everything the package does while a request is running: recording each query, finding the
+# line of application code behind it, and building the trace. What is left — encoding the payload
+# and the HTTP call — happens on a background thread, after the response (see the README).
+set -eu
+cd "$(dirname "$0")/.."
+
+for py in ${*:-3.9 3.13}; do
+	docker run --rm -v "$(pwd)":/pkg -w /pkg "python:$py-slim" python -c '
+import sys, time
+sys.path.insert(0, "/pkg/src")
+import slowpoke
+from slowpoke._origin import OriginFinder
+from slowpoke._tracer import Tracer
+
+tracer = Tracer(origin=OriginFinder("/app", 100), submit=lambda trace: None, service="app")
+
+# A stack as deep as a view calling a service calling the ORM.
+def deep(n, f):
+    return f() if n == 0 else deep(n - 1, f)
+
+sql = "SELECT orders.id, orders.total FROM orders WHERE orders.customer_id = %s ORDER BY orders.created_at DESC LIMIT 25"
+runs, queries = 3000, 50
+best = float("inf")
+for _ in range(3):
+    t = time.perf_counter()
+    for _ in range(runs):
+        trace = tracer.start_request("GET")
+        for _ in range(queries):
+            deep(10, lambda: tracer.record_query(sql, 0.0015, "postgresql"))
+        tracer.finish_request(trace, "/orders/{order_id}", "/orders/7", 200)
+    best = min(best, (time.perf_counter() - t) / runs * 1000)
+print("Python %-6s %.2f ms on a request with %d queries - %.1f microseconds per query"
+      % (".".join(map(str, sys.version_info[:2])), best, queries, best * 1000 / queries))
+'
+done

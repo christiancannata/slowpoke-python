@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slowpoke"
+dynamic = ["version"]
+description = "Tells Slowpoke which line of your Python app ran each query: Django, SQLAlchemy, FastAPI, Flask"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.2",
+    "Framework :: FastAPI",
+    "Framework :: Flask",
+]
+
+[project.optional-dependencies]
+django = ["Django>=4.2"]
+sqlalchemy = ["SQLAlchemy>=1.4"]
+flask = ["Flask>=2.0"]
+fastapi = ["starlette"]
+
+[tool.setuptools.dynamic]
+version = { attr = "slowpoke._tracer.VERSION" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 130   # the width this package is written at
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+# %-formatting is deliberate: the tracer runs on every query and % is cheaper than str.format,
+# and B904 would ask for "raise ... from" where the package swallows errors on purpose.
+ignore = ["B904", "UP031", "UP032"]

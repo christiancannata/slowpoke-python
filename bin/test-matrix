@@ -1,0 +1,8 @@
+#!/bin/sh
+# Every supported combination, one container at a time (the machine is small).
+set -eu
+cd "$(dirname "$0")"
+./test 3.9 'Django~=4.2.0' 'SQLAlchemy~=1.4.0' 'Flask~=2.3.0' 'Werkzeug<3' 'fastapi~=0.100.0' 'httpx<0.28' "$@"
+./test 3.9 "$@"
+./test 3.13 'Django~=5.2.0' 'Flask~=3.0.0' 'SQLAlchemy~=2.0.0' "$@"
+./test 3.13 "$@"

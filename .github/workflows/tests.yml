@@ -1,0 +1,45 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # weekly: new framework and Python releases can break compatibility without a push
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: Python ${{ matrix.python }}${{ matrix.name && format(' · {0}', matrix.name) || '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { python: "3.9", name: "oldest", constraints: "Django~=4.2.0 SQLAlchemy~=1.4.0 Flask~=2.3.0 Werkzeug<3 fastapi~=0.100.0 httpx<0.28" }
+          - { python: "3.9" }
+          - { python: "3.11" }
+          - { python: "3.12", name: "Django 5.2", constraints: "Django~=5.2.0 Flask~=3.0.0 SQLAlchemy~=2.0.0" }
+          - { python: "3.13" }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          python -m pip install -q --upgrade pip
+          printf '%s\n' ${{ matrix.constraints }} > constraints.txt
+          python -m pip install -q -r requirements-test.txt -c constraints.txt
+      - run: PYTHONPATH=src python -m pytest -p no:cacheprovider
+  ruff:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install -q ruff
+      - run: ruff check src tests
