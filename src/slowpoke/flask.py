@@ -50,6 +50,6 @@ def _teardown(exc):
             return
         status = request.environ.get(_STATUS) or (500 if exc is not None else 200)
         rule = request.url_rule
-        tracer.finish_request(trace, rule.rule if rule is not None else None, request.path, status)
+        tracer.finish_request(trace, rule.rule if rule is not None else None, request.path, status, request.host)
     except Exception:
         pass

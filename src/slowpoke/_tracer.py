@@ -6,7 +6,7 @@ import re
 import sys
 import time
 
-VERSION = "0.1.3"
+VERSION = "0.1.4"
 
 SERVER = 2
 CLIENT = 3
@@ -75,7 +75,7 @@ class Tracer:
         except Exception:
             return None
 
-    def finish_request(self, trace, route, path, status):
+    def finish_request(self, trace, route, path, status, host=None):
         if trace is None or trace.end is not None:
             return
         try:
@@ -88,6 +88,11 @@ class Tracer:
                 trace.attributes.append(_kv("url.path", "/" + str(path or "").split("?", 1)[0].lstrip("/")))
             status = int(status)
             trace.attributes.append(_kv("http.response.status_code", status))
+            # The host this request was answered for. With a web server in front on another
+            # machine, it is the only thing that says its access log and this trace are the same
+            # requests, so that nobody counts them twice.
+            if host:
+                trace.attributes.append(_kv("server.address", _hostname(host)))
             trace.error = status >= 500
         except Exception:
             trace.end = trace.end or self.clock()
@@ -220,6 +225,16 @@ def _running_task():
         return asyncio.current_task() if asyncio._get_running_loop() is not None else None
     except Exception:
         return None
+
+
+def _hostname(host):
+    """The host without the port, lowercased: Shop.Example.com:8443 is shop.example.com, and the
+    first of a comma-separated list is the one the request was addressed to."""
+    host = str(host).split(",")[0].strip().lower()
+    i = host.rfind(":")
+    if i > 0 and "]" not in host[i:]:
+        host = host[:i]
+    return host
 
 
 def _nanos(seconds):

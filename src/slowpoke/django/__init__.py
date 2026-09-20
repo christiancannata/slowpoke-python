@@ -161,13 +161,17 @@ def _start(request):
 def _finish(tracer, trace, request, status):
     if trace is None:
         return
+    host = None
     try:
         match = getattr(request, "resolver_match", None)
         route = route_template(match.route) if match is not None and getattr(match, "route", None) else None
         path = request.path
+        # get_host() validates against ALLOWED_HOSTS and raises on a host that is not allowed:
+        # the header itself is what a web server in front of us logged.
+        host = request.META.get("HTTP_HOST") or request.META.get("SERVER_NAME")
     except Exception:
         route, path = None, "/"
-    tracer.finish_request(trace, route, path, status)
+    tracer.finish_request(trace, route, path, status, host)
 
 
 def route_template(route):

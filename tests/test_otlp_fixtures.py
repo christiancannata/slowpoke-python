@@ -55,11 +55,13 @@ def scenarios():
     for _ in range(6):
         h.query(n_plus_one, 0.8, "sqlite", ("shop/views.py", 10))
     h.now += 0.01
-    h.tracer.finish_request(trace, "orders/", "/orders/", 200)
+    # Written as a browser sends it: the host is normalised, so a web server logging
+    # "shop.example.com" on another machine is recognised as the same requests.
+    h.tracer.finish_request(trace, "orders/", "/orders/", 200, "Shop.Example.com:8443")
     out.append({
         "name": "Django: N+1 with %s placeholders",
         "payload": h.payloads[0],
-        "expect": {"route": "GET /orders/", "status": 200, "requests": 1, "source": "otlp:shop", "queries": [
+        "expect": {"route": "GET /orders/", "status": 200, "requests": 1, "source": "otlp:shop", "site": "shop.example.com", "queries": [
             q('SELECT "shop_order"."id", "shop_order"."customer_id" FROM "shop_order" ORDER BY "shop_order"."id" ASC',
               1, "shop/views.py:9", "select shop_order.id, shop_order.customer_id from shop_order order by shop_order.id asc"),
             q(n_plus_one, 6, "shop/views.py:10",

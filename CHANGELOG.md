@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4 - 2026-09-20
+
+- The package says which host it answered for (`server.address`). With a web server in front of the
+  application on **another machine** - an ingress, a load balancer, containers elsewhere - no agent
+  sees both the access log and the traces, so until now the same requests were counted twice: in the
+  traffic, in the speed index and in the technical debt built from them. The host is what links the
+  two sides; on one machine the agent already paired single requests and still does.
+
 ## 0.1.3 - 2026-09-19
 
 - The name on PyPI is **slowpoke-python**: plain `slowpoke` was taken in 2012 by a package with one

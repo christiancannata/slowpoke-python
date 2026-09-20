@@ -41,7 +41,19 @@ def _finish(tracer, trace, scope, root_path, path, status):
         route = route_template(scope, root_path)
     except Exception:
         route = None
-    tracer.finish_request(trace, route, path, status)
+    tracer.finish_request(trace, route, path, status, _host(scope))
+
+
+def _host(scope):
+    """The Host header of the request, or the host the server answered on."""
+    try:
+        for name, value in scope.get("headers") or ():
+            if name.lower() == b"host":
+                return value.decode("latin-1")
+        server = scope.get("server")
+        return server[0] if server else None
+    except Exception:
+        return None
 
 
 def route_template(scope, initial_root_path=""):
