@@ -16,6 +16,10 @@ DRY="${2:-}"
 cd "$(dirname "$0")/.."
 
 grep -q "^## $VERSION " CHANGELOG.md || { echo "CHANGELOG.md has no entry for $VERSION" >&2; exit 1; }
+# What CI checks, checked here first: a line two characters too long stopped a release once,
+# after the tag was already pushed.
+docker run --rm -v "$PWD":/w -w /w python:3.12-alpine \
+	sh -c 'pip install -q ruff && ruff check src tests' || { echo "ruff is not happy" >&2; exit 1; }
 ./bin/test 3.13 >/dev/null || { echo "the suite does not pass on Python 3.13" >&2; exit 1; }
 ./bin/test 3.9 >/dev/null || { echo "the suite does not pass on Python 3.9" >&2; exit 1; }
 

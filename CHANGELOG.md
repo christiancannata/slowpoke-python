@@ -1,9 +1,15 @@
 # Changelog
 
+## 0.1.6 - 2026-09-20
+
+- The release gate runs the linter, which is what CI runs: 0.1.4 went out with a line two
+  characters over the limit, and the failure was found after the tag was pushed. The changelog of
+  0.1.5 said that release never reached PyPI - it did, a few minutes later. Both are on PyPI and
+  they only differ by a wrapped line in a test.
+
 ## 0.1.5 - 2026-09-20
 
-- Same as 0.1.4, which never reached PyPI: a line of the fixture test was two characters over the
-  limit and the linter stopped the release before it was published.
+- Same content as 0.1.4, with a line of the fixture test wrapped to keep the linter happy.
 
 ## 0.1.4 - 2026-09-20
 
