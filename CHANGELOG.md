@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5 - 2026-09-20
+
+- Same as 0.1.4, which never reached PyPI: a line of the fixture test was two characters over the
+  limit and the linter stopped the release before it was published.
+
 ## 0.1.4 - 2026-09-20
 
 - The package says which host it answered for (`server.address`). With a web server in front of the

@@ -61,7 +61,8 @@ def scenarios():
     out.append({
         "name": "Django: N+1 with %s placeholders",
         "payload": h.payloads[0],
-        "expect": {"route": "GET /orders/", "status": 200, "requests": 1, "source": "otlp:shop", "site": "shop.example.com", "queries": [
+        "expect": {"route": "GET /orders/", "status": 200, "requests": 1, "source": "otlp:shop",
+                   "site": "shop.example.com", "queries": [
             q('SELECT "shop_order"."id", "shop_order"."customer_id" FROM "shop_order" ORDER BY "shop_order"."id" ASC',
               1, "shop/views.py:9", "select shop_order.id, shop_order.customer_id from shop_order order by shop_order.id asc"),
             q(n_plus_one, 6, "shop/views.py:10",
