@@ -7,3 +7,4 @@ Flask>=2.0
 fastapi
 httpx
 celery
+requests

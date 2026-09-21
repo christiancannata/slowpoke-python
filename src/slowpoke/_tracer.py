@@ -5,8 +5,9 @@ import os
 import re
 import sys
 import time
+from urllib.parse import urlsplit
 
-VERSION = "0.1.6"
+VERSION = "0.1.7"
 
 SERVER = 2
 CLIENT = 3
@@ -29,7 +30,8 @@ def _random_id(size):
 
 
 class Trace:
-    __slots__ = ("kind", "name", "start", "end", "error", "trace_id", "span_id", "attributes", "queries", "dropped", "task")
+    __slots__ = ("kind", "name", "start", "end", "error", "trace_id", "span_id", "attributes", "queries", "dropped", "task",
+                 "http", "dropped_http")
 
     def __init__(self, kind, name, start, trace_id, span_id):
         self.kind = kind
@@ -43,17 +45,20 @@ class Trace:
         self.queries = []
         self.dropped = 0
         self.task = _running_task()
+        self.http = []
+        self.dropped_http = 0
 
 
 class Tracer:
     """Collects one trace per HTTP request or job and turns it into OTLP/JSON for the agent: a SERVER
     (or CONSUMER) span and one CLIENT span per query, with the SQL as the driver received it
-    (placeholders, never parameter values) and the application line that ran it.
+    (placeholders, never parameter values) and the application line that ran it, plus one CLIENT span
+    per outbound HTTP call, which names the remote host and nothing else of the URL.
 
     Every public method swallows its own errors: observability must never break the app."""
 
     def __init__(self, origin, submit, service="app", version=VERSION, max_queries=500, max_sql_length=10000,
-                 clock=time.time, ids=_random_id):
+                 clock=time.time, ids=_random_id, http_client=True, max_http_calls=200, agent_endpoint=None):
         self.origin = origin
         self.submit = submit
         self.service = service
@@ -62,6 +67,10 @@ class Tracer:
         self.max_sql_length = max(1, int(max_sql_length))
         self.clock = clock
         self.ids = ids
+        self.http_client = bool(http_client)
+        self.max_http_calls = max(0, int(max_http_calls))
+        target = _target(agent_endpoint) if agent_endpoint else None
+        self._agent = target[:2] if target else None
 
     # ------------------------------------------------------------ requests
 
@@ -152,6 +161,41 @@ class Tracer:
         except Exception:
             pass  # never let observability break the query that was just run
 
+    # ------------------------------------------------------------ outbound HTTP calls
+
+    def start_http_call(self, method, url):
+        """An outbound call is leaving, from the thread or task that makes it. Returns the handle to give
+        finish_http_call, or None when there is nothing to record. Only the host of the URL is kept."""
+        trace = _current.get()
+        if trace is None or trace.end is not None:
+            return None  # same rule as queries: outside requests and jobs nothing is recorded
+        try:
+            target = _target(url)
+            if target is None or target[:2] == self._agent:
+                return None
+            if len(trace.http) >= self.max_http_calls:
+                trace.dropped_http += 1
+                return None
+            # method, host, port (None when the scheme's default), start, end, status, error, origin, trace
+            call = [str(method or "GET").upper(), target[0], target[2], self.clock(), None, None, False,
+                    self.origin.find(trace.task), trace]
+            trace.http.append(call)
+            return call
+        except Exception:
+            return None
+
+    def finish_http_call(self, call, status):
+        """The call ended with a response (`status`) or failed (None). A 5xx is a failure too."""
+        if call is None or call[4] is not None or call[8].end is not None:
+            return  # a call still open when its trace ended was closed there, as an error
+        try:
+            status = int(status) if status else None
+            call[5] = status
+            call[6] = status is None or status >= 500
+            call[4] = self.clock()
+        except Exception:
+            pass
+
     # ------------------------------------------------------------ sending
 
     def _done(self, trace):
@@ -179,15 +223,34 @@ class Tracer:
         }
         if t.dropped > 0:
             root["attributes"].append(_kv("slowpoke.dropped_queries", t.dropped))
+        if t.dropped_http > 0:
+            root["attributes"].append(_kv("slowpoke.dropped_http_calls", t.dropped_http))
         if t.error:
             root["status"] = {"code": 2}
         spans = [root]
+        for method, host, port, start, end, status, error, origin, _ in list(t.http):
+            attributes = [_kv("http.request.method", method), _kv("server.address", host)]
+            if port is not None:
+                attributes.append(_kv("server.port", port))
+            if status is not None:
+                attributes.append(_kv("http.response.status_code", status))
+            _origin(attributes, origin)
+            span = {
+                "traceId": t.trace_id,
+                "spanId": self.ids(8),
+                "parentSpanId": t.span_id,
+                "name": method + " " + host,
+                "kind": CLIENT,
+                "startTimeUnixNano": _nanos(start),
+                "endTimeUnixNano": _nanos(end if end is not None else t.end),
+                "attributes": attributes,
+            }
+            if error or end is None:
+                span["status"] = {"code": 2}
+            spans.append(span)
         for sql, system, start, end, origin in list(t.queries):
             attributes = [_kv("db.system.name", _DB_SYSTEMS.get(system, system)), _kv("db.query.text", sql)]
-            if origin is not None:
-                attributes.append(_kv("code.file.path", origin[0]))
-                if origin[1] is not None:
-                    attributes.append(_kv("code.line.number", origin[1]))
+            _origin(attributes, origin)
             m = _STATEMENT.match(sql)
             spans.append({
                 "traceId": t.trace_id,
@@ -235,6 +298,25 @@ def _hostname(host):
     if i > 0 and "]" not in host[i:]:
         host = host[:i]
     return host
+
+
+def _origin(attributes, origin):
+    if origin is not None:
+        attributes.append(_kv("code.file.path", origin[0]))
+        if origin[1] is not None:
+            attributes.append(_kv("code.line.number", origin[1]))
+
+
+def _target(url):
+    """(host, port, port or None when it is the scheme's default) of a URL, or None. The path, the query
+    string and any credentials in it are never looked at again."""
+    parts = urlsplit(str(url))
+    host = parts.hostname
+    if not host:
+        return None
+    default = 443 if parts.scheme.lower() in ("https", "wss") else 80
+    port = parts.port or default
+    return host.lower(), port, None if port == default else port
 
 
 def _nanos(seconds):

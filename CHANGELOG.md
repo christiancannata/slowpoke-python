@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.7 - 2026-09-21
+
+- Outbound HTTP calls made with `requests` or `httpx` (sync and async) during a request, a task or a
+  command are now part of its trace: one span per call with the method, the remote host (the port only
+  when it is not the scheme's default), the status, the time spent waiting and the line of your code
+  that made it, so Slowpoke can say "this endpoint waits 8 s on api.stripe.com". An exception and a 5xx
+  answer are errors. The URL path, the query string, headers and bodies are never sent. Only the
+  top-level send of each library is patched, so one call is one span. `SLOWPOKE_HTTP_CLIENT=false` (or
+  `configure(http_client=False)`) turns it off and `SLOWPOKE_MAX_HTTP_CALLS` (200) bounds the calls
+  described per trace, the rest are counted (`slowpoke.dropped_http_calls`).
+
 ## 0.1.6 - 2026-09-20
 
 - The release gate runs the linter, which is what CI runs: 0.1.4 went out with a line two

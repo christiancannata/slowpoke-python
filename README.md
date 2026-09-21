@@ -133,7 +133,7 @@ that to be measured. Everything else happens off the request:
 | **Sent from a background thread** | the request only appends to a list and drops the finished trace into a bounded queue with `put_nowait`. Encoding and the HTTP call happen on one daemon thread |
 | **Never waits** | a hard time budget (`SLOWPOKE_TIMEOUT`, 0.1 s) and every error swallowed: an agent that is missing, slow or broken costs one trace, never a request. A full queue drops the trace |
 | **Never copies your data** | the stack is walked with `sys._getframe` to a bounded depth: no argument, no local variable, ever |
-| **Bounded** | 500 queries described per request at most, the rest counted; statements over 10 000 characters cut; a bounded per-file cache |
+| **Bounded** | 500 queries and 200 outbound calls described per request at most, the rest counted; statements over 10 000 characters cut; a bounded per-file cache |
 | **Quiet when idle** | queries outside a request, a task or a command — a worker polling its broker, a shell you opened — cost one context variable lookup and are not recorded |
 | **Async-safe** | the trace lives in `contextvars`: it follows `sync_to_async`, `run_in_threadpool` and asyncio tasks, and a statement run in a worker thread is attributed to the line that awaited it |
 
@@ -150,7 +150,15 @@ Sent only to the agent on your machine or private network:
 - **per command** — the command name (`close_orders`), how long it took, whether it raised;
 - **per query** — the SQL **with placeholders** exactly as the driver receives it, the database engine, the
   real duration, and the first application file and line on the stack, outside `site-packages/`,
-  `dist-packages/`, the standard library and this package.
+  `dist-packages/`, the standard library and this package;
+- **per outbound HTTP call** made with `requests` or `httpx` (sync and async) — the method, the remote
+  **host** (and its port when it is not 80/443), the response status, how long the call took, whether it
+  failed (an exception or a 5xx), and the line of your code that made it. Never the URL path, the query
+  string, headers or bodies: they carry tokens and personal data. The package patches `Session.send`,
+  `Client.send` and `AsyncClient.send` only when those libraries are installed, and never `urllib3` or
+  `httpcore` underneath, so one call is one span (a redirect followed by `requests` included). Calls
+  made with `urllib3`, `aiohttp` or `http.client` directly are not seen; the package's own delivery to
+  the agent is never traced.
 
 **Never sent** — parameter values, request parameters, headers, cookies, session, the user, exception
 messages. If you write literal values into raw SQL yourself, they are part of the statement, and the agent
@@ -168,6 +176,8 @@ Everything has a default that works. Nothing has to be set.
 | `SLOWPOKE_SERVICE` | the code root folder's name | the name of this application in Slowpoke |
 | `SLOWPOKE_COMMANDS` | `true` | trace Django management commands |
 | `SLOWPOKE_MAX_QUERIES` | `500` | queries described per request, task or command; the rest are counted |
+| `SLOWPOKE_HTTP_CLIENT` | `true` | record outbound calls made with `requests` and `httpx`; `false` does not even patch them |
+| `SLOWPOKE_MAX_HTTP_CALLS` | `200` | outbound calls described per request, task or command; the rest are counted |
 | `SLOWPOKE_MAX_SQL_LENGTH` | `10000` | longer statements are cut |
 | `SLOWPOKE_BACKTRACE_LIMIT` | `100` | stack frames inspected to find your line |
 | `SLOWPOKE_CODE_ROOT` | `BASE_DIR` in Django, else the working directory | file paths are sent relative to it |

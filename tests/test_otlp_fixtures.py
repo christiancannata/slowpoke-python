@@ -166,6 +166,33 @@ def scenarios():
                          "update orders set closed_at = ? where closed_at is null"),
                    ]},
     })
+
+    h = Harness()
+    trace = h.tracer.start_request("POST")
+    h.query("SELECT id, total FROM cart WHERE id = %s", 2.0, "postgresql", ("shop/views.py", 27), advance=0.005)
+    h.now += 0.001
+    h.at = ("shop/services/stripe.py", 88)
+    call = h.tracer.start_http_call("post", "https://api.stripe.com/v1/payment_intents?expand=customer")
+    h.now += 0.42
+    h.tracer.finish_http_call(call, 200)
+    h.now += 0.002
+    h.at = None  # a call made from library code only
+    call = h.tracer.start_http_call("GET", "http://Partner.Example.com:8080/stock?sku=A1")
+    h.now += 1.5
+    h.tracer.finish_http_call(call, None)
+    h.now += 0.003
+    h.tracer.finish_request(trace, "checkout/", "/checkout/", 200)
+    out.append({
+        "name": "request with outbound calls: one to Stripe, one failed to a partner",
+        "payload": h.payloads[0],
+        "expect": {"route": "POST /checkout/", "status": 200, "requests": 1, "source": "otlp:shop",
+                   "queries": [q("SELECT id, total FROM cart WHERE id = %s", 1, "shop/views.py:27",
+                                 "select id, total from cart where id = ?")],
+                   "outbound": [
+                       {"host": "api.stripe.com", "n": 1, "errors": 0, "origin": "shop/services/stripe.py:88"},
+                       {"host": "partner.example.com:8080", "n": 1, "errors": 1, "origin": ""},
+                   ]},
+    })
     return out
 
 

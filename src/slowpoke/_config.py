@@ -16,7 +16,8 @@ class Config:
     back to the defaults: a typo in an env file must never stop the app from booting."""
 
     def __init__(self, enabled=True, endpoint=DEFAULT_ENDPOINT, timeout=0.1, service=None, max_queries=500,
-                 max_sql_length=10000, backtrace_limit=100, code_root=None, queue_size=256):
+                 max_sql_length=10000, backtrace_limit=100, code_root=None, queue_size=256, http_client=True,
+                 max_http_calls=200):
         self.enabled = enabled
         self.endpoint = endpoint
         self.timeout = timeout
@@ -26,6 +27,8 @@ class Config:
         self.backtrace_limit = backtrace_limit
         self.code_root = code_root
         self.queue_size = queue_size
+        self.http_client = http_client
+        self.max_http_calls = max_http_calls
 
     @classmethod
     def from_env(cls, environ=None):
@@ -42,4 +45,6 @@ class Config:
             backtrace_limit=_number(env.get("SLOWPOKE_BACKTRACE_LIMIT"), d.backtrace_limit, int, 1),
             code_root=env.get("SLOWPOKE_CODE_ROOT", "").strip() or None,
             queue_size=_number(env.get("SLOWPOKE_QUEUE_SIZE"), d.queue_size, int, 1),
+            http_client=env.get("SLOWPOKE_HTTP_CLIENT", "").strip().lower() not in ("0", "false", "no", "off"),
+            max_http_calls=_number(env.get("SLOWPOKE_MAX_HTTP_CALLS"), d.max_http_calls, int, 0),
         )

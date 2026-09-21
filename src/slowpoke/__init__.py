@@ -24,8 +24,8 @@ _state = {"built": False, "tracer": None, "explicit": {}, "defaults": {}}
 def configure(**overrides):
     """Builds the tracer now from SLOWPOKE_* variables, with these keyword arguments on top: any Config
     field (enabled, endpoint, timeout, service, max_queries, max_sql_length, backtrace_limit, code_root,
-    queue_size), plus `sender` (an object with send(bytes) -> bool) and `background` (False sends inline,
-    for tests). Returns None when Slowpoke is disabled."""
+    queue_size, http_client, max_http_calls), plus `sender` (an object with send(bytes) -> bool) and
+    `background` (False sends inline, for tests). Returns None when Slowpoke is disabled."""
     with _lock:
         _state["explicit"] = dict(overrides)
         return _build()
@@ -83,6 +83,9 @@ def _build():
             service=service,
             max_queries=cfg.max_queries,
             max_sql_length=cfg.max_sql_length,
+            http_client=cfg.http_client,
+            max_http_calls=cfg.max_http_calls,
+            agent_endpoint=cfg.endpoint,
         )
         if explicit.get("background", True):
             tracer.background = BackgroundSender(sender, encode=tracer.encode_json, maxsize=cfg.queue_size)
@@ -90,6 +93,10 @@ def _build():
         else:
             tracer.submit = lambda trace: sender.send(tracer.encode_json(trace))
         _state["tracer"] = tracer
+        if cfg.http_client:
+            from . import _http
+
+            _http.install()  # requests and httpx, when installed; the wrappers ask the tracer on each call
         return tracer
     except Exception:
         return None  # a broken configuration disables Slowpoke, it never stops the app from booting
