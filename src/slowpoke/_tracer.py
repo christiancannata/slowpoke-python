@@ -7,7 +7,7 @@ import sys
 import time
 from urllib.parse import urlsplit
 
-VERSION = "0.1.7"
+VERSION = "0.1.8"
 
 SERVER = 2
 CLIENT = 3

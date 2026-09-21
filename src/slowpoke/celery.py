@@ -34,12 +34,12 @@ def install():
         return False
 
 
-def _prerun(task_id=None, task=None, **kwargs):
+def _prerun(task_id=None, task=None, args=None, kwargs=None, **_):
     try:
         tracer = slowpoke.get_tracer()
         if tracer is None or task_id is None or len(_open) >= MAX_OPEN:
             return
-        trace = tracer.start_job(getattr(task, "name", None) or "task", _queue(task))
+        trace = tracer.start_job(_name(task, args, kwargs), _queue(task))
         if trace is not None:
             _open[task_id] = trace
     except Exception:
@@ -57,6 +57,32 @@ def _postrun(task_id=None, state=None, **kwargs):
             tracer.finish_job(trace, failed=str(state) in ("FAILURE", "RETRY"))
     except Exception:
         pass
+
+
+# task.map(), .starmap() and .chunks() run as these built-ins, which call the real task in-process
+# for every item: the work is that task's, so the Jobs page names it, with how it was batched.
+# The other built-ins (backend_cleanup, chord_unlock, accumulate, group, chord) are Celery's own
+# work under a clear name and are reported as they are.
+_BATCHES = {"celery.map": "map", "celery.starmap": "starmap", "celery.chunks": "chunks"}
+
+
+def _name(task, args, kwargs):
+    """The task name, or for a batch built-in the name of the task it runs. Only the name is read:
+    the items are arguments, and arguments never leave the machine."""
+    name = getattr(task, "name", None) or "task"
+    how = _BATCHES.get(name)
+    if how is None:
+        return name
+    try:
+        inner = kwargs.get("task") if isinstance(kwargs, dict) else None
+        if inner is None and args:
+            inner = args[0]
+        inner = inner.get("task") if isinstance(inner, dict) else None
+        if isinstance(inner, str) and 0 < len(inner) <= 200 and not any(c.isspace() for c in inner):
+            return "%s (%s)" % (inner, how)
+    except Exception:
+        pass
+    return name
 
 
 def _queue(task):

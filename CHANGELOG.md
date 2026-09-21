@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.8 - 2026-09-21
+
+- `task.map()`, `task.starmap()` and `task.chunks()` are named after the task they run on the Jobs
+  page, with how it was batched (`shop.tasks.resize (starmap)`), instead of Celery's built-ins
+  `celery.map` / `celery.starmap` / `celery.chunks`, which call your task in-process for every item.
+  Only the task name is read: the items are arguments and never leave the machine. Celery's own work
+  (`celery.backend_cleanup`, `celery.chord_unlock`, `celery.accumulate`) keeps its name and is still
+  reported.
+
 ## 0.1.7 - 2026-09-21
 
 - Outbound HTTP calls made with `requests` or `httpx` (sync and async) during a request, a task or a

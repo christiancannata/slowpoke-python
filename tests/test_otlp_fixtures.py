@@ -13,6 +13,7 @@ import pytest
 from conftest import ROOT
 
 from slowpoke._tracer import Tracer
+from slowpoke.celery import _name
 from slowpoke.django import route_template
 
 FILE = os.path.join(os.path.dirname(os.path.dirname(ROOT)), "spec", "python_otlp_fixtures.json")
@@ -145,6 +146,25 @@ def scenarios():
                          "select name from customers where id = ?"),
                        q("DELETE FROM django_session WHERE expire_date < %s", 1, "",
                          "delete from django_session where expire_date < ?"),
+                   ]},
+    })
+
+    # task.starmap(...) runs as the built-in celery.starmap: named after the task it runs, never the items.
+    h = Harness()
+    starmap = type("Task", (), {"name": "celery.starmap"})()
+    job = h.tracer.start_job(_name(starmap, (), {"task": {"task": "shop.tasks.resize"},
+                                                  "it": [("mario.jpg", 100)]}), "images")
+    h.query("UPDATE images SET width = %s WHERE path = %s", 3.0, "postgresql", ("shop/tasks.py", 44))
+    h.now += 0.05
+    h.tracer.finish_job(job)
+    out.append({
+        "name": "Celery starmap: named after the task it runs, not the celery.starmap built-in",
+        "payload": h.payloads[0],
+        "expect": {"route": "job shop.tasks.resize (starmap)", "status": 0, "requests": 1, "source": "",
+                   "job": {"kind": "job", "name": "shop.tasks.resize (starmap)", "runs": 1, "failed": 0},
+                   "queries": [
+                       q("UPDATE images SET width = %s WHERE path = %s", 1, "shop/tasks.py:44",
+                         "update images set width = ? where path = ?"),
                    ]},
     })
 
