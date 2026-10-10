@@ -41,7 +41,7 @@ jobs:
     permissions:
       id-token: write # this, and nothing else, is what lets it publish
     steps:
-      - uses: actions/download-artifact@484a0b528fb4d7bd804637ccb632e47a0e638317 # v6.0.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v6.0.0
         with:
           name: dist
           path: dist/
